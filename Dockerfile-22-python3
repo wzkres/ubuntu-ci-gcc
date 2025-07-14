@@ -1,0 +1,65 @@
+FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
+
+LABEL maintainer="natsusue" \
+  description="Ubuntu 22.04 CI build worker image with gcc, git, cmake, python3, meson, ninja-build, cuda, etc for c/c++ projects"
+
+# update repo files
+RUN apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
+    software-properties-common \
+    build-essential \
+    wget \
+    automake \
+    libtool \
+    autoconf \
+    git \
+    gcc \
+    pkg-config \
+    ninja-build \
+    patchelf \
+    libdrm-dev \
+    libasound2-dev \
+    bison \
+    python3 \
+    python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+
+
+RUN gcc --version2
+RUN python3 --version
+
+RUN pip3 install meson
+
+# build cmake
+RUN wget -q --no-check-certificate https://github.com/Kitware/CMake/releases/download/v3.29.4/cmake-3.29.4.tar.gz && \
+    tar zxf cmake-3.29.4.tar.gz && \
+    cd cmake-3.29.4 && \
+    ./bootstrap -- -DCMAKE_USE_OPENSSL=OFF && \
+    make -s -j$(nproc) && \
+    make install && \
+    cd .. && \
+    rm -rf cmake-3.29.4* && \
+    cmake --version
+
+# build NASM
+RUN wget https://www.nasm.us/pub/nasm/releasebuilds/2.15.03/nasm-2.15.03.tar.gz && \
+    tar zxvf nasm-2.15.03.tar.gz && \
+    cd nasm-2.15.03 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf nasm-2.15.03*
+
+# ffnvcodec
+RUN git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git && \
+    cd nv-codec-headers && \
+    make install && \
+    cd .. && \
+    rm -rf nv-codec-headers
+
+# set CUDA ENV
+ENV PATH "/usr/local/cuda-11.7/bin${PATH:+:${PATH}}"
+ENV LD_LIBRARY_PATH "/usr/local/cuda-11.7/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+CMD ["/bin/bash"]
