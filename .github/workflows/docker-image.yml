@@ -1,0 +1,48 @@
+name: Docker Image CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      IMAGE_NAME:
+        type: choice
+        description: 'Select the docker image to build and push'
+        required: true
+        options:
+          - ubuntu-22-python3
+        default: 'ubuntu-22-python3'
+#  push:
+#    branches: [ "master" ]
+#  pull_request:
+#    branches: [ "master" ]
+
+env:
+    DOCKER_FILE: ${{ fromJSON('{"ubuntu-22-python3":"Dockerfile-22-python3"}')[github.event.inputs.IMAGE_NAME] }}
+    DOCKER_IMAGE: "${{ github.event.inputs.IMAGE_NAME }}"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - 
+      name: Checkout
+      uses: actions/checkout@v3
+#      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+    -
+      name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+    -
+      name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    -
+      name: Build and push ${{ github.event.inputs.IMAGE_NAME }}
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./${{ env.DOCKER_FILE }}
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/ubuntu-ci-gcc:${{ github.event.inputs.IMAGE_NAME }}
+        
