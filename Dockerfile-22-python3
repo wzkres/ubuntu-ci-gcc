@@ -25,7 +25,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/*
 
 
-RUN gcc --version2
+RUN gcc --version
 RUN python3 --version
 
 RUN pip3 install meson
